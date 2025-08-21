@@ -33,7 +33,8 @@ def normalize_keywords(keywords):
         "5. Strip leading and trailing whitespace from each line.\n"
         "6. Return the cleaned list in the same language as the original (do not translate).\n"
         "7. Return output ONLY as a JSON array of strings, with no extra text, explanation, or commentary.\n\n"
-        f"Input keywords: {keywords}"
+        "You must be strict: discard anything that looks like OCR artifacts, repeated characters, "
+        f"Input: {json.dumps(keywords, ensure_ascii=False)}"
     )
 
     try:
@@ -43,13 +44,11 @@ def normalize_keywords(keywords):
             temperature=0
         )
 
-        # Access content via attribute
         output_text = response.choices[0].message.content.strip()
-
         return json.loads(output_text)
     except Exception as e:
         print("Error normalizing keywords:", e)
-        return keywords  # fallback
+        return keywords
 
 # Normalize each screenshot
 for filename, keywords in ocr_data.items():
