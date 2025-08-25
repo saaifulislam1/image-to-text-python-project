@@ -14,6 +14,7 @@ LANGS = "eng+ben+jpn"
 # Better OCR settings
 CUSTOM_CONFIG = r'--oem 3 --psm 6'
 
+
 def fix_japanese_spacing(text: str) -> str:
     """
     Removes unwanted spaces between Japanese characters (Kana + Kanji).
@@ -25,18 +26,34 @@ def fix_japanese_spacing(text: str) -> str:
         text
     )
 
-def remove_search_icon_noise(line: str) -> str:
+
+def clean_ocr_line(line: str) -> str:
     """
-    Cleans up OCR artifacts where search icons are misread as Q, O, 0, @.
-    - Removes them if they appear alone.
-    - Strips them if they appear at the start or end of a line.
+    Cleans OCR text by removing UI artifacts, noise, and junk symbols.
     """
     line = line.strip()
-    # Drop if it's just a single suspicious character
-    if re.fullmatch(r'[QO0@]', line):
+    if not line:
         return ""
-    # Remove leading/trailing Q, O, 0, @
-    return re.sub(r'^[QO0@]+\s*|\s*[QO0@]+$', '', line).strip()
+
+    # 1. Drop pure garbage (nonsense mix of symbols/numbers)
+    if re.fullmatch(r'[\W\d_]+', line):
+        return ""
+
+    # 2. Remove leading artifacts like "ও.", "O.", "0.", "•"
+    line = re.sub(r'^(ও\.|[O0Q•●○□◇|]+\s*)', '', line)
+
+    # 3. Remove trailing garbage like "G", "O", "@"
+    line = re.sub(r'(\s*[GO0@]+)$', '', line)
+
+    # 4. Normalize multiple spaces
+    line = re.sub(r'\s+', ' ', line).strip()
+
+    # 5. Drop if still too short or meaningless
+    if len(line) < 3:
+        return ""
+
+    return line
+
 
 results = {}
 
@@ -52,11 +69,11 @@ for filename in sorted(os.listdir(INPUT_FOLDER)):
         # Extract + clean lines
         lines = []
         for line in text.split("\n"):
-            if not line.strip():
-                continue
             clean_line = fix_japanese_spacing(line.strip())
-            clean_line = remove_search_icon_noise(clean_line)
-            if clean_line and clean_line not in lines:  # remove empties + duplicates
+            clean_line = clean_ocr_line(clean_line)
+            if not clean_line:
+                continue
+            if clean_line not in lines:  # avoid duplicates
                 lines.append(clean_line)
 
         # Save under filename
