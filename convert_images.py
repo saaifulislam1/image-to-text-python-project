@@ -9,7 +9,7 @@ INPUT_FOLDER = "screenshots"
 OUTPUT_FILE = "output.json"
 
 # OCR languages (English + Bengali + Japanese)
-LANGS = "eng+ben+jpn"
+LANGS = "jpn"
 
 # Better OCR settings
 CUSTOM_CONFIG = r'--oem 3 --psm 6'
@@ -30,12 +30,17 @@ def fix_japanese_spacing(text: str) -> str:
 def clean_ocr_line(line: str) -> str:
     """
     Cleans OCR text by removing UI artifacts, noise, and junk symbols.
+    Specially ignores Google search icon artifacts (O, 0, Q, G, © etc).
     """
     line = line.strip()
     if not line:
         return ""
 
-    # 1. Drop pure garbage (nonsense mix of symbols/numbers)
+    # --- NEW: Drop if line is just the search icon OCR garbage ---
+    if line in {"O", "0", "Q", "G", "©", "®", "●", "○"}:
+        return ""
+
+    # 1. Drop pure garbage (symbols/numbers only)
     if re.fullmatch(r'[\W\d_]+', line):
         return ""
 
